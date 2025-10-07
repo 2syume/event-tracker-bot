@@ -34,9 +34,11 @@ Task:
 1) Decide if this is an event announcement (isEvent=true/false).
 2) If true, fill the JSON schema below.
 3) Keep original language for title/description/location/organizer/price/tags.
-4) Dates in ISO if possible (YYYY-MM-DD or full). If not sure, keep original text.
-5) Include provided image URLs that show event info.
-6) Respond ONLY with minified JSON, no explanations.
+4) Summarize title/description if needed.
+5) Dates in ISO if possible (YYYY-MM-DD or full). If not sure, keep original text.
+6) Include provided image URLs that show event info.
+7) If some fields are unclear, read from images if possible.
+8) Respond ONLY with minified JSON, no explanations.
 Schema:
 ${schemaText}`;
   return { system, user };
