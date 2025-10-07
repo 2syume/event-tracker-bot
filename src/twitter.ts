@@ -21,6 +21,8 @@ export type TweetData = {
   authorScreenName?: string;
   images: string[];
   lang?: string;
+  // ISO 8601 timestamp when available (tweet creation time)
+  createdAt?: string;
 };
 
 const TWITTER_URL_RE = /https?:\/\/(?:x|twitter)\.com\/[^\s/]+\/status\/(\d+)/i;
@@ -60,7 +62,10 @@ async function fetchViaSyndication(id: string): Promise<Partial<TweetData> | nul
     const images: string[] = (data.entities?.media ?? [])
       .filter((m: any) => m.type === 'photo' && m.media_url_https)
       .map((m: any) => m.media_url_https);
-    const result = { text, authorName, authorScreenName, images };
+    // created_at example: "Thu Oct 24 12:34:56 +0000 2024"
+    const createdRaw: string | undefined = data.created_at ?? data.createdAt;
+    const createdAt = createdRaw ? new Date(createdRaw).toISOString() : undefined;
+    const result = { text, authorName, authorScreenName, images, createdAt };
     debug('fetchViaSyndication ok', {
       id,
       textLen: text.length,
@@ -84,7 +89,19 @@ async function fetchViaVxTwitter(id: string): Promise<Partial<TweetData> | null>
     const images: string[] = (data.media_extended ?? data.media?.photos ?? [])
       .map((m: any) => m.url ?? m.src ?? m)
       .filter(Boolean);
-    const result = { text, authorName, authorScreenName, images };
+    // timestamp fields could be "date" (ISO) or nested tweet.created_at
+    const createdRaw: string | number | undefined =
+      data.date_epoch ?? data.date ?? data.created_at ?? data.createdAt ?? data.tweet?.created_at;
+    let createdAt: string | undefined;
+    if (typeof createdRaw === 'number') {
+      // seconds or milliseconds
+      const ms = createdRaw < 1e12 ? createdRaw * 1000 : createdRaw;
+      createdAt = new Date(ms).toISOString();
+    } else if (typeof createdRaw === 'string') {
+      const d = new Date(createdRaw);
+      if (!Number.isNaN(d.getTime())) createdAt = d.toISOString();
+    }
+    const result = { text, authorName, authorScreenName, images, createdAt };
     debug('fetchViaVxTwitter ok', {
       id,
       textLen: text.length,

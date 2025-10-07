@@ -16,7 +16,9 @@ export async function processTweetUrl(url: string) {
     images: tweet.images.length,
     textLen: tweet.text.length,
   });
-  const { system, user } = buildClassificationPrompt(tweet.text, tweet.images);
+  const { system, user } = buildClassificationPrompt(tweet.text, tweet.images, {
+    tweetDate: tweet.createdAt,
+  });
   const messages = [
     { role: 'system' as const, content: system },
     {
