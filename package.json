@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "bun run --hot index.ts",
     "start": "bun run index.ts",
+    "start:debug": "bun run index.ts --debug",
     "test:tweet": "bun run src/pipeline.ts",
     "typecheck": "tsc -p . --noEmit",
-    "smoke": "bun run src/smoke.ts"
+    "smoke": "bun run src/smoke.ts",
+    "smoke:debug": "bun run src/smoke.ts --debug"
   },
   "dependencies": {
     "googleapis": "^161.0.0",

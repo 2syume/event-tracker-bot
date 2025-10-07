@@ -1,5 +1,6 @@
 // Utilities to parse Twitter/X URLs and fetch tweet content (text + images)
 // We avoid Twitter API by using public oEmbed + CDN endpoints where possible.
+import { debug } from "./debug";
 
 export type TweetMedia = {
   type: "photo" | "video" | "animated_gif" | "unknown";
@@ -58,7 +59,13 @@ async function fetchViaSyndication(
     const images: string[] = (data.entities?.media || [])
       .filter((m: any) => m.type === "photo" && m.media_url_https)
       .map((m: any) => m.media_url_https);
-    return { text, authorName, authorScreenName, images };
+    const result = { text, authorName, authorScreenName, images };
+    debug("fetchViaSyndication ok", {
+      id,
+      textLen: text.length,
+      images: images.length,
+    });
+    return result;
   } catch {
     return null;
   }
@@ -70,7 +77,7 @@ async function fetchViaVxTwitter(
 ): Promise<Partial<TweetData> | null> {
   try {
     const res = await fetchText(
-      `https://api.vxtwitter.com/Tweet/Details/${id}`
+      `https://api.vxtwitter.com/Twitter/status/${id}`
     );
     if (!res.ok) return null;
     const data: any = await res.json();
@@ -81,7 +88,13 @@ async function fetchViaVxTwitter(
     const images: string[] = (data.media_extended ?? data.media?.photos ?? [])
       .map((m: any) => m.url || m.src || m)
       .filter(Boolean);
-    return { text, authorName, authorScreenName, images };
+    const result = { text, authorName, authorScreenName, images };
+    debug("fetchViaVxTwitter ok", {
+      id,
+      textLen: text.length,
+      images: images.length,
+    });
+    return result;
   } catch {
     return null;
   }
@@ -95,6 +108,7 @@ async function fetchViaJina(url: string): Promise<Partial<TweetData> | null> {
     );
     if (!res.ok) return null;
     const text = await res.text();
+    debug("fetchViaJina ok", { url, textLen: text.length });
     return { text, images: [] };
   } catch {
     return null;
@@ -106,17 +120,21 @@ export async function fetchTweet(url: string): Promise<TweetData | null> {
   if (!id) return null;
 
   const base: TweetData = { id, url, text: "", images: [] };
-  const viaS = await fetchViaSyndication(id);
-  if (viaS && (viaS.text || (viaS.images && viaS.images.length))) {
-    return { ...base, ...viaS } as TweetData;
-  }
+  debug("fetchTweet start", { id, url });
   const viaVx = await fetchViaVxTwitter(id);
   if (viaVx && (viaVx.text || (viaVx.images && viaVx.images.length))) {
+    debug("fetchTweet using vxtwitter", { id });
     return { ...base, ...viaVx } as TweetData;
   }
   const viaJina = await fetchViaJina(url);
   if (viaJina && viaJina.text) {
+    debug("fetchTweet using jina", { id });
     return { ...base, ...viaJina } as TweetData;
+  }
+  const viaS = await fetchViaSyndication(id);
+  if (viaS && (viaS.text || (viaS.images && viaS.images.length))) {
+    debug("fetchTweet using syndication", { id });
+    return { ...base, ...viaS } as TweetData;
   }
   // Final fallback: use Jina to read fxtwitter page by ID
   try {
@@ -125,7 +143,10 @@ export async function fetchTweet(url: string): Promise<TweetData | null> {
     );
     if (res.ok) {
       const text = await res.text();
-      if (text && text.length > 0) return { ...base, text, images: [] };
+      if (text && text.length > 0) {
+        debug("fetchTweet using fxtwitter+jina", { id, textLen: text.length });
+        return { ...base, text, images: [] };
+      }
     }
   } catch {}
   return null;

@@ -1,7 +1,9 @@
 import { assertConfig } from "./config";
+import { setDebug } from "./debug";
 import { processTweetUrl } from "./pipeline";
 
 async function main() {
+  if (process.argv.includes("--debug")) setDebug(true);
   assertConfig();
   const url =
     process.argv[2] ??

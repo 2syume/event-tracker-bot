@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { debug } from "./debug";
 import type { EventRecord } from "./schema";
 
 export type SheetsClient = {
@@ -39,6 +40,7 @@ export async function createSheetsClient(
           requests: [{ addSheet: { properties: { title: name } } }],
         },
       });
+      debug("sheets.addSheet", { name });
     }
   }
 
@@ -74,6 +76,7 @@ export async function createSheetsClient(
         valueInputOption: "RAW",
         requestBody: { values: [header] },
       });
+      debug("sheets.headerSet", { sheetName });
     }
   }
 
@@ -129,6 +132,7 @@ export async function createSheetsClient(
           valueInputOption: "RAW",
           requestBody: { values: [rowValues] },
         });
+        debug("sheets.update", { sheetName, row: existingRow });
         return { action: "updated" as const, row: existingRow };
       }
 
@@ -143,6 +147,7 @@ export async function createSheetsClient(
       const updatedRange = appendRes.data.updates?.updatedRange ?? "";
       const m = updatedRange.match(/!([A-Z]+)(\d+):/);
       const row = m ? Number(m[2]) : -1;
+      debug("sheets.insert", { sheetName, row });
       return { action: "inserted" as const, row };
     },
   };

@@ -82,6 +82,16 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Typecheck (debug)",
+			"type": "shell",
+			"command": "bun run typecheck",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
 		}
 	]
 }

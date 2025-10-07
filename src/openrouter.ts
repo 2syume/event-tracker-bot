@@ -1,4 +1,5 @@
 // Minimal OpenRouter client for chat completions (JSON and translation)
+import { debug } from "./debug";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -23,6 +24,7 @@ export async function chat(
 ) {
   const key = process.env.OPENROUTER_API_KEY ?? "";
   if (!key) throw new Error("Missing OPENROUTER_API_KEY");
+  const start = Date.now();
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -43,5 +45,10 @@ export async function chat(
     throw new Error(`OpenRouter error: ${res.status} ${await res.text()}`);
   const json: any = await res.json();
   const content = json?.choices?.[0]?.message?.content ?? "";
+  debug("openrouter.chat", {
+    model: opts.model,
+    ms: Date.now() - start,
+    contentLen: String(content).length,
+  });
   return String(content);
 }

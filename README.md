@@ -13,6 +13,12 @@ bun install
 2. Create .env
    Copy `.env.example` to `.env` and fill values:
 
+Enable debug logs:
+
+```bash
+bun run index.ts --debug
+```
+
 - TELEGRAM_BOT_TOKEN: from BotFather
 - OPENROUTER_API_KEY: from https://openrouter.ai/keys
 - OPENROUTER_GEMINI_MODEL: default `google/gemini-2.5-flash`
@@ -22,11 +28,13 @@ bun install
 - GOOGLE_SHEET_NAME: target sheet name (default: Events)
 - GOOGLE_SHEET_CHINESE_NAME: tab name for translated entries (default: EventsInChinese)
 
+Smoke test with debug:
+
+```bash
+bun run src/smoke.ts --debug
+```
+
 Translated output:
-
-- When the extracted event isn’t originally in Chinese, the pipeline also writes to a separate sheet/tab named `EventsInChinese` with the translated fields.
-
-Optional:
 
 - JINA_READER_API_KEY: to improve tweet fallback extraction
 - HTTP_TIMEOUT_MS

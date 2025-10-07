@@ -4,12 +4,18 @@ import { buildClassificationPrompt, buildTranslationPrompt } from "./prompts";
 import { EventSchema, type EventRecord } from "./schema";
 import { createSheetsClient } from "./sheets";
 import { CONFIG, assertConfig } from "./config";
+import { debug } from "./debug";
 
 export async function processTweetUrl(url: string) {
   const tweet = await fetchTweet(url);
   if (!tweet) throw new Error("Unable to fetch tweet");
 
   // Build messages for Gemini (can include images as tool content references)
+  debug("pipeline.tweet", {
+    id: tweet.id,
+    images: tweet.images.length,
+    textLen: tweet.text.length,
+  });
   const { system, user } = buildClassificationPrompt(tweet.text, tweet.images);
   const messages = [
     { role: "system" as const, content: system },
@@ -29,6 +35,7 @@ export async function processTweetUrl(url: string) {
     model: CONFIG.geminiModel,
     response_format: { type: "json_object" },
   });
+  debug("pipeline.extractionRawLen", extractionStr.length);
   let extracted: EventRecord;
   try {
     const parsed = JSON.parse(extractionStr);
@@ -42,6 +49,7 @@ export async function processTweetUrl(url: string) {
     parsed.images = parsed.images ?? tweet.images ?? [];
     extracted = EventSchema.parse(parsed);
   } catch (e) {
+    debug("pipeline.extractionParseError", (e as Error).message);
     throw new Error(
       "Failed to parse or validate extraction: " +
         (e as Error).message +
@@ -75,6 +83,7 @@ export async function processTweetUrl(url: string) {
     translated = EventSchema.parse(tParsed);
   } catch {
     // ignore translation errors
+    debug("pipeline.translationParseError");
   }
 
   // Upsert into Google Sheet
@@ -83,6 +92,7 @@ export async function processTweetUrl(url: string) {
     CONFIG.googleSheetName
   );
   const result = await sheets.upsertEvent(extracted);
+  debug("pipeline.sheets", result);
   let cnResult: { action: string; row: number } | undefined;
   if (translated) {
     try {
@@ -91,9 +101,11 @@ export async function processTweetUrl(url: string) {
         CONFIG.googleSheetChineseName
       );
       cnResult = await client.upsertEvent(translated);
+      debug("pipeline.sheets.cn", cnResult);
     } catch (e) {
       // do not fail the whole pipeline if Chinese upsert fails
       cnResult = undefined;
+      debug("pipeline.sheets.cn.error", (e as Error).message);
     }
   }
 
