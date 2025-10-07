@@ -4,28 +4,26 @@ Telegram bot that collects Twitter/X links from chat, fetches tweet content (tex
 
 ## Setup
 
-1. Install deps
+- Install deps
 
 ```bash
 bun install
 ```
 
-2. Create .env
-   Copy `.env.example` to `.env` and fill values:
+- Create .env
+  Copy `.env.example` to `.env` and fill values:
+  - TELEGRAM_BOT_TOKEN: from BotFather
+  - OPENROUTER_API_KEY: from https://openrouter.ai/keys
+  - OPENROUTER_GEMINI_MODEL: default `google/gemini-2.5-flash`
+  - OPENROUTER_DEEPSEEK_MODEL: default `deepseek/deepseek-chat-v3.1`
+  - GOOGLE_SERVICE_ACCOUNT_B64: base64 of service account JSON with Sheets scope
+  - GOOGLE_SHEET_ID: target spreadsheet ID
+  - GOOGLE_SHEET_NAME: target sheet name (default: Events)
+  - GOOGLE_SHEET_CHINESE_NAME: tab name for translated entries (default: EventsInChinese)
 
-- TELEGRAM_BOT_TOKEN: from BotFather
-- OPENROUTER_API_KEY: from https://openrouter.ai/keys
-- OPENROUTER_GEMINI_MODEL: default `google/gemini-2.5-flash`
-- OPENROUTER_DEEPSEEK_MODEL: default `deepseek/deepseek-chat-v3.1`
-- GOOGLE_SERVICE_ACCOUNT_B64: base64 of service account JSON with Sheets scope
-- GOOGLE_SHEET_ID: target spreadsheet ID
-- GOOGLE_SHEET_NAME: target sheet name (default: Events)
-- GOOGLE_SHEET_CHINESE_NAME: tab name for translated entries (default: EventsInChinese)
-
-3. Google Sheet
-
-- Share the sheet with your service account email.
-- First run will create headers automatically.
+- Google Sheet
+  - Share the sheet with your service account email.
+  - First run will create headers automatically.
 
 ## Run
 
