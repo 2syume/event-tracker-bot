@@ -7,10 +7,13 @@
     "dev": "bun run --hot index.ts",
     "start": "bun run index.ts",
     "start:debug": "bun run index.ts --debug",
-    "test:tweet": "bun run src/pipeline.ts",
+    "test:tweet": "bun run src/pipeline.ts https://x.com/curtaindamashii/status/1975033367268872542",
     "typecheck": "tsc -p . --noEmit",
-    "smoke": "bun run src/smoke.ts",
-    "smoke:debug": "bun run src/smoke.ts --debug"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "dependencies": {
     "googleapis": "^161.0.0",
@@ -18,7 +21,25 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.37.0",
     "@types/bun": "latest",
-    "typescript": "^5.6.3"
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.3",
+    "prettier": "^3.6.2",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.46.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,css,scss,html}": [
+      "prettier --write"
+    ]
   }
 }

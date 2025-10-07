@@ -13,12 +13,6 @@ bun install
 2. Create .env
    Copy `.env.example` to `.env` and fill values:
 
-Enable debug logs:
-
-```bash
-bun run index.ts --debug
-```
-
 - TELEGRAM_BOT_TOKEN: from BotFather
 - OPENROUTER_API_KEY: from https://openrouter.ai/keys
 - OPENROUTER_GEMINI_MODEL: default `google/gemini-2.5-flash`
@@ -27,17 +21,6 @@ bun run index.ts --debug
 - GOOGLE_SHEET_ID: target spreadsheet ID
 - GOOGLE_SHEET_NAME: target sheet name (default: Events)
 - GOOGLE_SHEET_CHINESE_NAME: tab name for translated entries (default: EventsInChinese)
-
-Smoke test with debug:
-
-```bash
-bun run src/smoke.ts --debug
-```
-
-Translated output:
-
-- JINA_READER_API_KEY: to improve tweet fallback extraction
-- HTTP_TIMEOUT_MS
 
 3. Google Sheet
 
@@ -58,10 +41,16 @@ Dev hot reload:
 bun run --hot index.ts
 ```
 
+Enable debug logs:
+
+```bash
+bun run index.ts --debug
+```
+
 Test pipeline for a single tweet (without Telegram):
 
 ```bash
-bun run src/pipeline.ts https://twitter.com/someuser/status/1234567890
+bun run src/pipeline.ts https://x.com/curtaindamashii/status/1975033367268872542
 ```
 
 ## Notes

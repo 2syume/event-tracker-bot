@@ -1,9 +1,6 @@
-import { type EventRecord } from "./schema";
+import { type EventRecord } from './schema';
 
-export function buildClassificationPrompt(
-  tweetText: string,
-  imageUrls: string[]
-) {
+export function buildClassificationPrompt(tweetText: string, imageUrls: string[]) {
   const system = `You are an expert event information extractor. Determine if the content announces a real event. If it is an event, extract a clean JSON.`;
   const schemaText = `{
   "source": {
@@ -28,7 +25,7 @@ export function buildClassificationPrompt(
 }`;
   const user = `Content:
 ${tweetText}
-Images: ${imageUrls.join(", ") || "none"}
+Images: ${imageUrls.join(', ') || 'none'}
 
 Task:
 1) Decide if this is an event announcement (isEvent=true/false).
