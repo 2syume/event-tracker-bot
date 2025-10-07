@@ -18,19 +18,21 @@ export function startBot() {
     if (!urlMatch) return; // ignore non-tweet messages
 
     const url = urlMatch[0];
-    await ctx.reply(`Processing tweet: ${url}`);
     debug("bot.process", { url });
     try {
+      await ctx.sendChatAction("typing");
       const result = await processTweetUrl(url);
-      const status = `${result.sheets.action.toUpperCase()} row ${
-        result.sheets.row
-      }`;
-      await ctx.reply(
-        `Event: ${result.extracted.title ?? "(no title)"}\nAction: ${status}`
-      );
-      if (result.chineseSheets) {
-        debug("bot.process.cn", result.chineseSheets);
-      }
+      const title =
+        result.translated?.title ?? result.extracted.title ?? "(no title)";
+      const start = result.extracted.startDate ?? "(unknown)";
+      const end = result.extracted.endDate ?? "";
+      const when = end ? `${start} → ${end}` : start;
+      const where =
+        result.translated?.location ?? result.extracted.location ?? "(unknown)";
+      const sheetUrl = `https://docs.google.com/spreadsheets/d/${CONFIG.googleSheetId}/edit`;
+      const textMsg = `Event: ${title}\nWhen: ${when}\nWhere: ${where}\nSheet: ${sheetUrl}`;
+      await ctx.reply(textMsg, { link_preview_options: { is_disabled: true } });
+      debug("bot.process.success");
     } catch (e) {
       const msg = (e as Error).message;
       debug("bot.process.error", msg);
