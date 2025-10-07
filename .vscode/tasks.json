@@ -1,0 +1,67 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Install dependencies",
+			"type": "shell",
+			"command": "bun install",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "bun run typecheck",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run bot (dry)",
+			"type": "shell",
+			"command": "bun run --bun index.ts",
+			"args": [],
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Typecheck again",
+			"type": "shell",
+			"command": "bun run typecheck",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run smoke test",
+			"type": "shell",
+			"command": "bun run smoke",
+			"args": [],
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run smoke test again",
+			"type": "shell",
+			"command": "bun run smoke",
+			"args": [],
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run smoke test (retry)",
+			"type": "shell",
+			"command": "bun run smoke",
+			"args": [],
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

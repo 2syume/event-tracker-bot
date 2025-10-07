@@ -1,0 +1,22 @@
+{
+  "name": "event-tracker-bot",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --hot index.ts",
+    "start": "bun run index.ts",
+    "test:tweet": "bun run src/pipeline.ts",
+    "typecheck": "tsc -p . --noEmit",
+    "smoke": "bun run src/smoke.ts"
+  },
+  "dependencies": {
+    "googleapis": "^161.0.0",
+    "telegraf": "^4.16.3",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.6.3"
+  }
+}
