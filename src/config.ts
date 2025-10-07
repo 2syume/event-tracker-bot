@@ -7,6 +7,8 @@ export const CONFIG = {
   googleServiceAccountB64: process.env.GOOGLE_SERVICE_ACCOUNT_B64 ?? "",
   googleSheetId: process.env.GOOGLE_SHEET_ID ?? "",
   googleSheetName: process.env.GOOGLE_SHEET_NAME ?? "Events",
+  googleSheetChineseName:
+    process.env.GOOGLE_SHEET_CHINESE_NAME ?? "EventsInChinese",
   httpTimeoutMs: Number(process.env.HTTP_TIMEOUT_MS ?? 20000),
 } as const;
 

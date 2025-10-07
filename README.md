@@ -20,6 +20,11 @@ bun install
 - GOOGLE_SERVICE_ACCOUNT_B64: base64 of service account JSON with Sheets scope
 - GOOGLE_SHEET_ID: target spreadsheet ID
 - GOOGLE_SHEET_NAME: target sheet name (default: Events)
+- GOOGLE_SHEET_CHINESE_NAME: tab name for translated entries (default: EventsInChinese)
+
+Translated output:
+
+- When the extracted event isn’t originally in Chinese, the pipeline also writes to a separate sheet/tab named `EventsInChinese` with the translated fields.
 
 Optional:
 

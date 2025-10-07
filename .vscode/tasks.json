@@ -62,6 +62,26 @@
 			"args": [],
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Typecheck (after Chinese sheet)",
+			"type": "shell",
+			"command": "bun run typecheck",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Typecheck env changes",
+			"type": "shell",
+			"command": "bun run typecheck",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
 		}
 	]
 }

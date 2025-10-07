@@ -61,25 +61,20 @@ export async function processTweetUrl(url: string) {
 
   // Translate to Chinese when original isn't Chinese
   let translated: EventRecord | undefined = undefined;
-  const isChinese =
-    /[\u4e00-\u9fff]/.test(extracted.title ?? "") ||
-    /[\u4e00-\u9fff]/.test(extracted.description ?? "");
-  if (!isChinese) {
-    const { system: tSys, user: tUser } = buildTranslationPrompt(extracted);
-    const tMsg = [
-      { role: "system" as const, content: tSys },
-      { role: "user" as const, content: tUser },
-    ];
-    const tStr = await chat(tMsg, {
-      model: CONFIG.deepseekModel,
-      response_format: { type: "json_object" },
-    });
-    try {
-      const tParsed = JSON.parse(tStr);
-      translated = EventSchema.parse(tParsed);
-    } catch {
-      // ignore translation errors
-    }
+  const { system: tSys, user: tUser } = buildTranslationPrompt(extracted);
+  const tMsg = [
+    { role: "system" as const, content: tSys },
+    { role: "user" as const, content: tUser },
+  ];
+  const tStr = await chat(tMsg, {
+    model: CONFIG.deepseekModel,
+    response_format: { type: "json_object" },
+  });
+  try {
+    const tParsed = JSON.parse(tStr);
+    translated = EventSchema.parse(tParsed);
+  } catch {
+    // ignore translation errors
   }
 
   // Upsert into Google Sheet
@@ -88,8 +83,21 @@ export async function processTweetUrl(url: string) {
     CONFIG.googleSheetName
   );
   const result = await sheets.upsertEvent(extracted);
+  let cnResult: { action: string; row: number } | undefined;
+  if (translated) {
+    try {
+      const client = await createSheetsClient(
+        CONFIG.googleSheetId,
+        CONFIG.googleSheetChineseName
+      );
+      cnResult = await client.upsertEvent(translated);
+    } catch (e) {
+      // do not fail the whole pipeline if Chinese upsert fails
+      cnResult = undefined;
+    }
+  }
 
-  return { extracted, translated, sheets: result };
+  return { extracted, translated, sheets: result, chineseSheets: cnResult };
 }
 
 // Optional dev entry when run directly

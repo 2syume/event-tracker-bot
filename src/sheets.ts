@@ -27,7 +27,23 @@ export async function createSheetsClient(
   const auth = getAuthFromEnv();
   const sheets = google.sheets({ version: "v4", auth });
 
+  async function ensureSheetExists(name: string) {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+    const exists = (meta.data.sheets || []).some(
+      (s) => s.properties?.title === name
+    );
+    if (!exists) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: sheetId,
+        requestBody: {
+          requests: [{ addSheet: { properties: { title: name } } }],
+        },
+      });
+    }
+  }
+
   async function ensureHeader() {
+    await ensureSheetExists(sheetName);
     const header = [
       "tweetId",
       "url",
