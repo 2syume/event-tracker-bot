@@ -19,6 +19,8 @@ export function startBot() {
     try {
       await ctx.sendChatAction('typing');
       const result = await processTweetUrl(url);
+      if (!result.extracted.isEvent) return;
+
       const title = result.translated?.title ?? result.extracted.title ?? '(no title)';
       const start = result.extracted.startDate ?? '(unknown)';
       const end = result.extracted.endDate ?? '';
