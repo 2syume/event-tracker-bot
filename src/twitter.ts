@@ -87,7 +87,8 @@ async function fetchViaVxTwitter(id: string): Promise<Partial<TweetData> | null>
     const authorName: string | undefined = data.user_name ?? data.user?.name;
     const authorScreenName: string | undefined = data.user_screen_name ?? data.user?.screen_name;
     const images: string[] = (data.media_extended ?? data.media?.photos ?? [])
-      .map((m: any) => m.url ?? m.src ?? m)
+      .filter((m: any) => m && m.type === 'image')
+      .map((m: any) => m.url ?? m.src)
       .filter(Boolean);
     // timestamp fields could be "date" (ISO) or nested tweet.created_at
     const createdRaw: string | number | undefined =
