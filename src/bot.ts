@@ -11,10 +11,22 @@ export function startBot() {
     const message = ctx.message;
     if (!message || !('text' in message) || typeof message.text !== 'string') return;
     const text = message.text;
-    const urlMatch = /https?:\/\/(?:x|twitter)\.com\/[\w_]+\/status\/\d+/i.exec(text);
+    // Match X/Twitter URLs from official and popular mirror/fix domains
+    // Supports: x.com, twitter.com, mobile.twitter.com, vxtwitter.com, fxtwitter.com, fixupx.com, fixvx.com, pxtwitter.com, twittpr.com
+    // Path variants: /<user>/status/<id>, /i/status/<id>, /i/web/status/<id>
+    const urlMatch =
+      /https?:\/\/(?:(?:x|twitter|mobile\.twitter|vxtwitter|fxtwitter|fixupx|fixvx|pxtwitter|twittpr)\.com)\/(?:[\w_]+|i(?:\/web)?)\/status\/\d+/i.exec(
+        text,
+      );
     if (!urlMatch) return; // ignore non-tweet messages
 
-    const url = urlMatch[0];
+    // Normalize to canonical x.com URL to keep logs/results consistent
+    const url = urlMatch[0]
+      .replace(
+        /^(https?:\/\/)(?:twitter|mobile\.twitter|vxtwitter|fxtwitter|fixupx|fixvx|pxtwitter|twittpr)\.com/i,
+        '$1x.com',
+      )
+      .replace(/\/(?:i(?:\/web)?)\/status\//i, '/i/status/');
     debug('bot.process', { url });
     try {
       await ctx.sendChatAction('typing');

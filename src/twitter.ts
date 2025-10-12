@@ -25,7 +25,16 @@ export type TweetData = {
   createdAt?: string;
 };
 
-const TWITTER_URL_RE = /https?:\/\/(?:x|twitter)\.com\/[^\s/]+\/status\/(\d+)/i;
+// Match canonical and mirror/fix domains for X/Twitter plus common path variants
+// Examples:
+// - https://x.com/user/status/123
+// - https://twitter.com/user/status/123
+// - https://mobile.twitter.com/user/status/123
+// - https://vxtwitter.com/i/web/status/123
+// - https://fxtwitter.com/i/status/123
+// - https://fixupx.com/user/status/123
+const TWITTER_URL_RE =
+  /https?:\/\/(?:(?:x|twitter|mobile\.twitter|vxtwitter|fxtwitter|fixupx|fixvx|pxtwitter|twittpr)\.com)\/(?:[^\s/]+|i(?:\/web)?)\/status\/(\d+)/i;
 
 export function extractTweetId(input: string): string | null {
   const m = TWITTER_URL_RE.exec(input);
@@ -128,17 +137,24 @@ async function fetchViaJina(url: string): Promise<Partial<TweetData> | null> {
 }
 
 export async function fetchTweet(url: string): Promise<TweetData | null> {
-  const id = extractTweetId(url);
+  // Normalize various mirror domains to x.com for consistency
+  const normalizedUrl = url
+    .replace(
+      /^(https?:\/\/)(?:twitter|mobile\.twitter|vxtwitter|fxtwitter|fixupx|fixvx|pxtwitter|twittpr)\.com/i,
+      '$1x.com',
+    )
+    .replace(/\/(?:i(?:\/web)?)\/status\//i, '/i/status/');
+  const id = extractTweetId(normalizedUrl);
   if (!id) return null;
 
-  const base: TweetData = { id, url, text: '', images: [] };
-  debug('fetchTweet start', { id, url });
+  const base: TweetData = { id, url: normalizedUrl, text: '', images: [] };
+  debug('fetchTweet start', { id, url: normalizedUrl });
   const viaVx = await fetchViaVxTwitter(id);
   if (viaVx && (viaVx.text || viaVx.images?.length)) {
     debug('fetchTweet using vxtwitter', { id });
     return { ...base, ...viaVx } satisfies TweetData;
   }
-  const viaJina = await fetchViaJina(url);
+  const viaJina = await fetchViaJina(normalizedUrl);
   if (viaJina?.text) {
     debug('fetchTweet using jina', { id });
     return { ...base, ...viaJina } satisfies TweetData;
