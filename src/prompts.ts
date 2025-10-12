@@ -5,7 +5,7 @@ export function buildClassificationPrompt(
   imageUrls: string[],
   opts?: { tweetDate?: string },
 ) {
-  const system = `You are an expert event information extractor. Determine if the content announces a real event. If it is an event, extract a clean JSON.`;
+  const system = `You are an expert event information extractor. Determine if the content announces an event. If it is an event, extract a clean JSON.`;
   const schemaText = `{
   "source": {
     "platform": "twitter",
@@ -30,11 +30,11 @@ export function buildClassificationPrompt(
   const meta = opts?.tweetDate ? `Tweet date (UTC ISO): ${opts.tweetDate}` : 'Tweet date: unknown';
   const user = `Content:
 ${tweetText}
-Images: ${imageUrls.join(', ') || 'none'}
+${imageUrls.length > 0 ? `Images: ${imageUrls.join(', ')}` : ''}
 ${meta}
 
 Task:
-1) Decide if this is an event announcement (isEvent=true/false).
+1) Decide if this is an anime / game / comic (nijigen) related event announcement (isEvent=true/false).
 2) If true, fill the JSON schema below.
 3) Keep original language for title/description/location/organizer/price/tags.
 4) Summarize title/description if needed.
@@ -48,7 +48,7 @@ ${schemaText}`;
 }
 
 export function buildTranslationPrompt(eventJson: EventRecord) {
-  const system = `You translate event data to Chinese while preserving factual details.`;
+  const system = `You are a professional translator. Translate data to Chinese while preserving factual details.`;
   const user = `Translate this event JSON to Chinese for fields: title, description, location, organizer, price, tags. Keep other fields unchanged. Respond ONLY with JSON, same schema.
 Event:
 ${JSON.stringify(eventJson)}`;
