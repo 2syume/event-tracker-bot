@@ -1,3 +1,4 @@
+import z from 'zod';
 import { CONFIG, assertConfig } from './config';
 import { debug, setDebug } from './debug';
 import { chat } from './openrouter';
@@ -27,7 +28,7 @@ export async function processTweetUrl(url: string) {
         { type: 'text' as const, text: user },
         ...tweet.images.map((u) => ({
           type: 'image_url' as const,
-          image_url: { url: u },
+          imageUrl: { url: u },
         })),
       ],
     },
@@ -35,7 +36,11 @@ export async function processTweetUrl(url: string) {
 
   const extractionStr = await chat(messages, {
     model: CONFIG.geminiModel,
-    response_format: { type: 'json_object' },
+    enforcedJsonSchema: {
+      name: 'EventRecord',
+      description: 'Extract event data from a tweet',
+      schema: z.toJSONSchema(EventSchema),
+    },
   });
   debug('pipeline.extractionRawLen', extractionStr.length);
   let extracted: EventRecord;
@@ -82,7 +87,11 @@ export async function processTweetUrl(url: string) {
   ];
   const tStr = await chat(tMsg, {
     model: CONFIG.deepseekModel,
-    response_format: { type: 'json_object' },
+    enforcedJsonSchema: {
+      name: 'EventRecord',
+      description: 'Extract event data from a tweet',
+      schema: z.toJSONSchema(EventSchema),
+    },
   });
   try {
     const tParsed = JSON.parse(tStr) as EventRecord;

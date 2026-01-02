@@ -1,16 +1,55 @@
-// Minimal OpenRouter client for chat completions (JSON and translation)
+// Minimal OpenRouter client wrapper around the official SDK
+import { OpenRouter } from '@openrouter/sdk';
+import type { JSONSchemaConfig, ResponseFormatJSONSchema } from '@openrouter/sdk/models';
+
 import { debug } from './debug';
 
-export type ChatMessage = {
-  role: 'system' | 'user' | 'assistant';
-  content:
-    | string
-    | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[];
-};
+function normalizeContentToString(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    // OpenAI-compatible: [{ type: 'text', text: '...' }, { type: 'image_url', ... }]
+    const parts = content
+      .map((part) => {
+        if (part && typeof part === 'object') {
+          const maybeType = (part as { type?: unknown }).type;
+          if (maybeType === 'text') {
+            const text = (part as { text?: unknown }).text;
+            return typeof text === 'string' ? text : '';
+          }
+        }
+        return '';
+      })
+      .filter((p) => p.length > 0);
+    return parts.join('');
+  }
+  if (content == null) return '';
+  try {
+    return JSON.stringify(content);
+  } catch {
+    return '';
+  }
+}
+
+export type ChatContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; imageUrl: { url: string } };
+
+export type ChatMessage =
+  | { role: 'system'; content: string }
+  | { role: 'user'; content: string | ChatContentPart[] }
+  | { role: 'assistant'; content: string };
 
 export type ChatOptions = {
   model: string;
-  response_format?: { type: 'json_object' | 'text' };
+  /** Enforce JSON Schema output (overrides responseFormat when set). */
+  enforcedJsonSchema?: {
+    /** Identifier used by the model (required by the API). */
+    name: string;
+    /** Optional description of the schema. */
+    description?: string;
+    /** JSON Schema object (Draft-07-ish). */
+    schema: Record<string, unknown>;
+  };
   temperature?: number;
 };
 
@@ -18,31 +57,42 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions, signal?: 
   const key = process.env.OPENROUTER_API_KEY ?? '';
   if (!key) throw new Error('Missing OPENROUTER_API_KEY');
   const start = Date.now();
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://github.com/your/org', // optional
-      'X-Title': 'event-tracker-bot',
-    },
-    body: JSON.stringify({
+  const client = new OpenRouter({ apiKey: key });
+
+  const enforcedResponseFormat: ResponseFormatJSONSchema | undefined = opts.enforcedJsonSchema
+    ? {
+        type: 'json_schema',
+        jsonSchema: {
+          name: opts.enforcedJsonSchema.name,
+          description: opts.enforcedJsonSchema.description,
+          schema: opts.enforcedJsonSchema.schema as JSONSchemaConfig['schema'],
+          strict: true,
+        },
+      }
+    : undefined;
+
+  const result = await client.chat.send(
+    {
       model: opts.model,
-      messages,
+      // SDK message shape is OpenAI-compatible; our ChatMessage is compatible.
+      messages: messages,
+      stream: false,
       temperature: opts.temperature ?? 0,
-      response_format: opts.response_format,
-    }),
-    signal,
-  });
-  if (!res.ok) throw new Error(`OpenRouter error: ${res.status} ${await res.text()}`);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const json: any = await res.json();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const content = json?.choices?.[0]?.message?.content ?? '';
+      responseFormat: enforcedResponseFormat,
+    },
+    {
+      fetchOptions: {
+        signal,
+      },
+    },
+  );
+
+  const contentRaw = result?.choices?.[0]?.message?.content;
+  const content = normalizeContentToString(contentRaw);
   debug('openrouter.chat', {
     model: opts.model,
     ms: Date.now() - start,
-    contentLen: String(content).length,
+    contentLen: content.length,
   });
-  return String(content);
+  return content;
 }

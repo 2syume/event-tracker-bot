@@ -16,6 +16,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@openrouter/sdk": "^0.3.11",
     "googleapis": "^161.0.0",
     "telegraf": "^4.16.3",
     "zod": "^4.1.12"
