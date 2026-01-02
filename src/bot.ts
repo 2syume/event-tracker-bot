@@ -1,7 +1,7 @@
 import { Telegraf, type Context } from 'telegraf';
 import { CONFIG, assertConfig } from './config';
 import { debug } from './debug';
-import { processTweetUrl } from './pipeline';
+import { processUrl } from './pipeline';
 
 function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -41,23 +41,16 @@ function messageMentionsBot(
   return new RegExp(`@${escapeRegExp(normalized)}\\b`, 'i').test(messageText);
 }
 
-function extractTweetUrlFromText(text: string): string | undefined {
-  // Match X/Twitter URLs from official and popular mirror/fix domains
-  // Supports: x.com, twitter.com, mobile.twitter.com, vxtwitter.com, fxtwitter.com, fixupx.com, fixvx.com, pxtwitter.com, twittpr.com
-  // Path variants: /<user>/status/<id>, /i/status/<id>, /i/web/status/<id>
-  const urlMatch =
-    /https?:\/\/(?:(?:x|twitter|mobile\.twitter|vxtwitter|fxtwitter|fixupx|fixvx|pxtwitter|twittpr)\.com)\/(?:[\w_]+|i(?:\/web)?)\/status\/\d+/i.exec(
-      text,
-    );
-  if (!urlMatch) return undefined;
+function extractFirstUrlFromText(text: string): string | undefined {
+  // Match the first http(s) URL, trimming common trailing punctuation.
+  // This intentionally supports *any* website, not just Twitter/X.
+  const match = /https?:\/\/[^\s<>()]+/i.exec(text);
+  if (!match) return undefined;
 
-  // Normalize to canonical x.com URL to keep logs/results consistent
-  return urlMatch[0]
-    .replace(
-      /^(https?:\/\/)(?:twitter|mobile\.twitter|vxtwitter|fxtwitter|fixupx|fixvx|pxtwitter|twittpr)\.com/i,
-      '$1x.com',
-    )
-    .replace(/\/(?:i(?:\/web)?)\/status\//i, '/i/status/');
+  let url = match[0];
+  // Trim characters that commonly follow a URL in chat messages.
+  url = url.replace(/[)\]}>.,!?;:'"“”’]+$/g, '');
+  return url;
 }
 
 export function startBot() {
@@ -98,13 +91,13 @@ export function startBot() {
     if (repliedText) candidateTexts.push(repliedText);
     candidateTexts.push(message.text);
 
-    const url = candidateTexts.map(extractTweetUrlFromText).find((u) => typeof u === 'string');
-    if (!url) return; // ignore non-tweet messages
+    const url = candidateTexts.map(extractFirstUrlFromText).find((u) => typeof u === 'string');
+    if (!url) return; // ignore messages without a URL
 
     debug('bot.process', { url });
     try {
       await ctx.sendChatAction('typing');
-      const result = await processTweetUrl(url);
+      const result = await processUrl(url);
       if (!result.extracted.isEvent) return;
 
       const title = result.translated?.title ?? result.extracted.title ?? '(no title)';

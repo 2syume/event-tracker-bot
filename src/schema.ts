@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const EventSchema = z.object({
   source: z.object({
-    platform: z.literal('twitter'),
+    platform: z.enum(['twitter', 'web']),
     url: z.url(),
     tweetId: z.string(),
     authorName: z.string().optional(),

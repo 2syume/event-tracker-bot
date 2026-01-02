@@ -1,11 +1,17 @@
 import { type EventRecord } from './schema';
 
 export function buildClassificationPrompt(
-  tweetText: string,
+  contentText: string,
   imageUrls: string[],
-  opts?: { tweetDate?: string },
+  opts?: { sourceDate?: string; sourceUrl?: string; sourceLabel?: string },
 ) {
-  const meta = opts?.tweetDate ? `Tweet date (UTC ISO): ${opts.tweetDate}` : 'Tweet date: unknown';
+  const metaParts: string[] = [];
+  if (opts?.sourceLabel) metaParts.push(`Source: ${opts.sourceLabel}`);
+  if (opts?.sourceUrl) metaParts.push(`Source URL: ${opts.sourceUrl}`);
+  metaParts.push(
+    opts?.sourceDate ? `Source date (UTC ISO): ${opts.sourceDate}` : 'Source date: unknown',
+  );
+  const meta = metaParts.join('\n');
 
   const system = `You are an expert event information extractor. Determine if the content announces an event. If it is an event, extract a clean JSON.`;
   const user = `
@@ -20,7 +26,7 @@ Task:
 8) Respond ONLY with minified JSON, no explanations.
 
 Content:
-${tweetText}
+${contentText}
 ${meta}
 ${imageUrls.length > 0 ? `Images: ${imageUrls.join(', ')}` : ''}`;
   return { system, user };

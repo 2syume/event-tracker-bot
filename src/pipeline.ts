@@ -5,20 +5,49 @@ import { chat } from './openrouter';
 import { buildClassificationPrompt, buildTranslationPrompt } from './prompts';
 import { EventSchema, type EventRecord } from './schema';
 import { createSheetsClient } from './sheets';
-import { fetchTweet } from './twitter';
+import { extractTweetId, fetchTweet } from './twitter';
+import { fetchWebPage } from './web';
 
-export async function processTweetUrl(url: string) {
-  const tweet = await fetchTweet(url);
-  if (!tweet) throw new Error('Unable to fetch tweet');
+import { createHash } from 'node:crypto';
 
-  // Build messages for Gemini (can include images as tool content references)
-  debug('pipeline.tweet', {
-    id: tweet.id,
-    images: tweet.images.length,
-    textLen: tweet.text.length,
+export type ProcessSheetsResult =
+  | { action: 'inserted' | 'updated'; row: number }
+  | { action: 'skipped'; row: number };
+
+export type ProcessResult = {
+  extracted: EventRecord;
+  translated?: EventRecord;
+  sheets: ProcessSheetsResult;
+  chineseSheets?: { action: string; row: number };
+};
+
+function makeWebSourceId(url: string): string {
+  const hash = createHash('sha256').update(url).digest('hex').slice(0, 16);
+  return `web:${hash}`;
+}
+
+async function processContent(opts: {
+  platform: 'twitter' | 'web';
+  url: string;
+  sourceId: string;
+  text: string;
+  images: string[];
+  authorName?: string;
+  authorHandle?: string;
+  sourceDate?: string;
+  sourceLabel?: string;
+}): Promise<ProcessResult> {
+  debug('pipeline.source', {
+    platform: opts.platform,
+    sourceId: opts.sourceId,
+    images: opts.images.length,
+    textLen: opts.text.length,
   });
-  const { system, user } = buildClassificationPrompt(tweet.text, tweet.images, {
-    tweetDate: tweet.createdAt,
+
+  const { system, user } = buildClassificationPrompt(opts.text, opts.images, {
+    sourceDate: opts.sourceDate,
+    sourceUrl: opts.url,
+    sourceLabel: opts.sourceLabel,
   });
   const messages = [
     { role: 'system' as const, content: system },
@@ -26,7 +55,7 @@ export async function processTweetUrl(url: string) {
       role: 'user' as const,
       content: [
         { type: 'text' as const, text: user },
-        ...tweet.images.map((u) => ({
+        ...opts.images.map((u) => ({
           type: 'image_url' as const,
           imageUrl: { url: u },
         })),
@@ -38,29 +67,33 @@ export async function processTweetUrl(url: string) {
     model: CONFIG.geminiModel,
     enforcedJsonSchema: {
       name: 'EventRecord',
-      description: 'Extract event data from a tweet',
+      description: 'Extract event data from a webpage or social post',
       schema: z.toJSONSchema(EventSchema),
     },
   });
   debug('pipeline.extractionRawLen', extractionStr.length);
+
   let extracted: EventRecord;
   try {
     const parsed = JSON.parse(extractionStr) as EventRecord;
-    // Fill source fields
-    if (!parsed.source)
+
+    if (!parsed.source) {
       parsed.source = {
-        platform: 'twitter',
-        url: tweet.url,
-        tweetId: tweet.id,
-        authorName: tweet.authorName,
-        authorHandle: tweet.authorScreenName,
+        platform: opts.platform,
+        url: opts.url,
+        tweetId: opts.sourceId,
+        authorName: opts.authorName,
+        authorHandle: opts.authorHandle,
       };
-    parsed.source.platform = 'twitter';
-    parsed.source.url = tweet.url;
-    parsed.source.tweetId = tweet.id;
-    parsed.source.authorName = tweet.authorName;
-    parsed.source.authorHandle = tweet.authorScreenName;
-    parsed.images = parsed.images ?? tweet.images ?? [];
+    }
+
+    parsed.source.platform = opts.platform;
+    parsed.source.url = opts.url;
+    parsed.source.tweetId = opts.sourceId;
+    if (opts.authorName) parsed.source.authorName = opts.authorName;
+    if (opts.authorHandle) parsed.source.authorHandle = opts.authorHandle;
+    parsed.images = parsed.images ?? opts.images ?? [];
+
     extracted = EventSchema.parse(parsed);
   } catch (e) {
     debug('pipeline.extractionParseError', (e as Error).message);
@@ -69,7 +102,6 @@ export async function processTweetUrl(url: string) {
     );
   }
 
-  // If not an event, return early
   if (!extracted.isEvent) {
     return {
       extracted,
@@ -78,7 +110,6 @@ export async function processTweetUrl(url: string) {
     };
   }
 
-  // Translate to Chinese when original isn't Chinese
   let translated: EventRecord | undefined = undefined;
   const { system: tSys, user: tUser } = buildTranslationPrompt(extracted);
   const tMsg = [
@@ -89,7 +120,7 @@ export async function processTweetUrl(url: string) {
     model: CONFIG.deepseekModel,
     enforcedJsonSchema: {
       name: 'EventRecord',
-      description: 'Extract event data from a tweet',
+      description: 'Translate event data',
       schema: z.toJSONSchema(EventSchema),
     },
   });
@@ -97,14 +128,13 @@ export async function processTweetUrl(url: string) {
     const tParsed = JSON.parse(tStr) as EventRecord;
     translated = EventSchema.parse(tParsed);
   } catch {
-    // ignore translation errors
     debug('pipeline.translationParseError');
   }
 
-  // Upsert into Google Sheet
   const sheets = await createSheetsClient(CONFIG.googleSheetId, CONFIG.googleSheetName);
   const result = await sheets.upsertEvent(extracted);
   debug('pipeline.sheets', result);
+
   let cnResult: { action: string; row: number } | undefined;
   if (translated) {
     try {
@@ -112,7 +142,6 @@ export async function processTweetUrl(url: string) {
       cnResult = await client.upsertEvent(translated);
       debug('pipeline.sheets.cn', cnResult);
     } catch (e) {
-      // do not fail the whole pipeline if Chinese upsert fails
       cnResult = undefined;
       debug('pipeline.sheets.cn.error', (e as Error).message);
     }
@@ -121,16 +150,51 @@ export async function processTweetUrl(url: string) {
   return { extracted, translated, sheets: result, chineseSheets: cnResult };
 }
 
+export async function processTweetUrl(url: string) {
+  // Backwards-compatible wrapper.
+  return processUrl(url);
+}
+
+export async function processUrl(url: string): Promise<ProcessResult> {
+  const tweetId = extractTweetId(url);
+  if (tweetId) {
+    const tweet = await fetchTweet(url);
+    if (!tweet) throw new Error('Unable to fetch tweet');
+    return processContent({
+      platform: 'twitter',
+      url: tweet.url,
+      sourceId: tweet.id,
+      text: tweet.text,
+      images: tweet.images,
+      authorName: tweet.authorName,
+      authorHandle: tweet.authorScreenName,
+      sourceDate: tweet.createdAt,
+      sourceLabel: 'Twitter/X',
+    });
+  }
+
+  const page = await fetchWebPage(url);
+  if (!page) throw new Error('Unable to fetch webpage');
+  return processContent({
+    platform: 'web',
+    url: page.url,
+    sourceId: makeWebSourceId(page.url),
+    text: page.text,
+    images: [],
+    sourceLabel: 'Web page',
+  });
+}
+
 // Optional dev entry when run directly
 if (import.meta.main) {
   setDebug(true);
   assertConfig();
   const url = process.argv[2] ?? '';
   if (!url) {
-    console.error('Usage: bun run src/pipeline.ts <tweetUrl>');
+    console.error('Usage: bun run src/pipeline.ts <url>');
     process.exit(1);
   }
-  processTweetUrl(url)
+  processUrl(url)
     .then((r) => {
       console.log('Extraction:', r.extracted);
       if (r.translated) console.log('Chinese:', r.translated);

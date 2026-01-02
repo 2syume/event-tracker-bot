@@ -1,6 +1,6 @@
 # Event Tracker Bot
 
-Telegram bot that collects Twitter/X links from chat, fetches tweet content (text + images), uses Gemini 2.5 Flash via OpenRouter to detect and extract event info, optionally translates into Chinese using DeepSeek v3.1 (OpenRouter), and upserts the data into a Google Sheet.
+Telegram bot that collects URLs from chat (Twitter/X and other websites), fetches content (tweet text/images for Twitter/X; readable text for other pages), uses Gemini 2.5 Flash via OpenRouter to detect and extract event info, optionally translates into Chinese using DeepSeek v3.1 (OpenRouter), and upserts the data into a Google Sheet.
 
 ## Setup
 
@@ -45,14 +45,17 @@ Enable debug logs:
 bun run index.ts --debug
 ```
 
-Test pipeline for a single tweet (without Telegram):
+Test pipeline for a single URL (without Telegram):
 
 ```bash
 bun run src/pipeline.ts https://x.com/curtaindamashii/status/1975033367268872542
+
+# Example (non-Twitter):
+# bun run src/pipeline.ts https://example.com/some-event-page
 ```
 
 ## Notes
 
 - This project uses public endpoints (syndication/vxtwitter) to fetch tweet text/images; for private tweets it may fail.
 - The LLM extraction is validated with Zod; if the output drifts, prompts may need tuning.
-- The bot upserts rows by Tweet ID.
+- The bot upserts rows by a source ID (Tweet ID for Twitter/X; a stable hash for other URLs).
