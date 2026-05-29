@@ -20,6 +20,7 @@ bun install
   - GOOGLE_SHEET_ID: target spreadsheet ID
   - GOOGLE_SHEET_NAME: target sheet name (default: Events)
   - GOOGLE_SHEET_CHINESE_NAME: tab name for translated entries (default: EventsInChinese)
+  - TELEGRAM_HANDLER_TIMEOUT_MS: maximum time for one Telegram update handler (default: 300000)
 
 - Google Sheet
   - Share the sheet with your service account email.

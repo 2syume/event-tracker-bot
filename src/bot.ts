@@ -282,7 +282,9 @@ async function replyWithProcessResult(ctx: Context, result: ProcessResult): Prom
 
 export function startBot() {
   assertConfig();
-  const bot = new Telegraf(CONFIG.telegramToken);
+  const bot = new Telegraf(CONFIG.telegramToken, {
+    handlerTimeout: CONFIG.telegramHandlerTimeoutMs,
+  });
 
   // Cache bot username for mention detection in group chats.
   let botUsername: string | undefined;

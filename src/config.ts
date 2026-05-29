@@ -8,6 +8,7 @@ export const CONFIG = {
   googleSheetName: process.env.GOOGLE_SHEET_NAME ?? 'Events',
   googleSheetChineseName: process.env.GOOGLE_SHEET_CHINESE_NAME ?? 'EventsInChinese',
   httpTimeoutMs: Number(process.env.HTTP_TIMEOUT_MS ?? 20000),
+  telegramHandlerTimeoutMs: Number(process.env.TELEGRAM_HANDLER_TIMEOUT_MS ?? 300000),
 } as const;
 
 export function assertConfig() {
