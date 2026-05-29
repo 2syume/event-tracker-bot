@@ -96,7 +96,7 @@ async function fetchViaVxTwitter(id: string): Promise<Partial<TweetData> | null>
     const authorName: string | undefined = data.user_name ?? data.user?.name;
     const authorScreenName: string | undefined = data.user_screen_name ?? data.user?.screen_name;
     const images: string[] = (data.media_extended ?? data.media?.photos ?? [])
-      .filter((m: any) => m && m.type === 'image')
+      .filter((m: any) => m?.type === 'image')
       .map((m: any) => m.url ?? m.src)
       .filter(Boolean);
     // timestamp fields could be "date" (ISO) or nested tweet.created_at
@@ -150,7 +150,7 @@ export async function fetchTweet(url: string): Promise<TweetData | null> {
   const base: TweetData = { id, url: normalizedUrl, text: '', images: [] };
   debug('fetchTweet start', { id, url: normalizedUrl });
   const viaVx = await fetchViaVxTwitter(id);
-  if (viaVx && (viaVx.text || viaVx.images?.length)) {
+  if (viaVx?.text || viaVx?.images?.length) {
     debug('fetchTweet using vxtwitter', { id });
     return { ...base, ...viaVx } satisfies TweetData;
   }
@@ -160,7 +160,7 @@ export async function fetchTweet(url: string): Promise<TweetData | null> {
     return { ...base, ...viaJina } satisfies TweetData;
   }
   const viaS = await fetchViaSyndication(id);
-  if (viaS && (viaS.text || viaS.images?.length)) {
+  if (viaS?.text || viaS?.images?.length) {
     debug('fetchTweet using syndication', { id });
     return { ...base, ...viaS } satisfies TweetData;
   }

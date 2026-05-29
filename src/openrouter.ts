@@ -1,6 +1,6 @@
 // Minimal OpenRouter client wrapper around the official SDK
 import { OpenRouter } from '@openrouter/sdk';
-import type { JSONSchemaConfig, ResponseFormatJSONSchema } from '@openrouter/sdk/models';
+import type { ChatFormatJsonSchemaConfig } from '@openrouter/sdk/models';
 
 import { debug } from './debug';
 
@@ -59,13 +59,13 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions, signal?: 
   const start = Date.now();
   const client = new OpenRouter({ apiKey: key });
 
-  const enforcedResponseFormat: ResponseFormatJSONSchema | undefined = opts.enforcedJsonSchema
+  const enforcedResponseFormat: ChatFormatJsonSchemaConfig | undefined = opts.enforcedJsonSchema
     ? {
         type: 'json_schema',
         jsonSchema: {
           name: opts.enforcedJsonSchema.name,
           description: opts.enforcedJsonSchema.description,
-          schema: opts.enforcedJsonSchema.schema as JSONSchemaConfig['schema'],
+          schema: opts.enforcedJsonSchema.schema,
           strict: true,
         },
       }
@@ -73,12 +73,14 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions, signal?: 
 
   const result = await client.chat.send(
     {
-      model: opts.model,
-      // SDK message shape is OpenAI-compatible; our ChatMessage is compatible.
-      messages: messages,
-      stream: false,
-      temperature: opts.temperature ?? 0,
-      responseFormat: enforcedResponseFormat,
+      chatRequest: {
+        model: opts.model,
+        // SDK message shape is OpenAI-compatible; our ChatMessage is compatible.
+        messages: messages,
+        stream: false,
+        temperature: opts.temperature ?? 0,
+        responseFormat: enforcedResponseFormat,
+      },
     },
     {
       fetchOptions: {
@@ -87,7 +89,7 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions, signal?: 
     },
   );
 
-  const contentRaw = result?.choices?.[0]?.message?.content;
+  const contentRaw: unknown = result.choices[0]?.message.content;
   const content = normalizeContentToString(contentRaw);
   debug('openrouter.chat', {
     model: opts.model,

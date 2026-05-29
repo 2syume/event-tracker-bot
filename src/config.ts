@@ -1,8 +1,8 @@
 export const CONFIG = {
   telegramToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
   openRouterKey: process.env.OPENROUTER_API_KEY ?? '',
-  geminiModel: process.env.OPENROUTER_GEMINI_MODEL ?? 'google/gemini-2.5-flash',
-  deepseekModel: process.env.OPENROUTER_DEEPSEEK_MODEL ?? 'deepseek/deepseek-chat-v3.1',
+  geminiModel: process.env.OPENROUTER_GEMINI_MODEL ?? '~google/gemini-flash-latest:nitro',
+  deepseekModel: process.env.OPENROUTER_DEEPSEEK_MODEL ?? 'deepseek/deepseek-v4-pro:nitro',
   googleServiceAccountB64: process.env.GOOGLE_SERVICE_ACCOUNT_B64 ?? '',
   googleSheetId: process.env.GOOGLE_SHEET_ID ?? '',
   googleSheetName: process.env.GOOGLE_SHEET_NAME ?? 'Events',

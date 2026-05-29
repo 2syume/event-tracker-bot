@@ -1,6 +1,6 @@
 # Event Tracker Bot
 
-Telegram bot that collects URLs from chat (Twitter/X and other websites), fetches content (tweet text/images for Twitter/X; readable text for other pages), uses Gemini 2.5 Flash via OpenRouter to detect and extract event info, optionally translates into Chinese using DeepSeek v3.1 (OpenRouter), and upserts the data into a Google Sheet.
+Telegram bot that collects URLs from chat (Twitter/X and other websites), fetches content (tweet text/images for Twitter/X; readable text for other pages), uses OpenRouter to detect and extract event info, optionally translates into Chinese, and upserts the data into a Google Sheet.
 
 ## Setup
 
@@ -14,8 +14,8 @@ bun install
   Copy `.env.example` to `.env` and fill values:
   - TELEGRAM_BOT_TOKEN: from BotFather
   - OPENROUTER_API_KEY: from https://openrouter.ai/keys
-  - OPENROUTER_GEMINI_MODEL: default `google/gemini-2.5-flash`
-  - OPENROUTER_DEEPSEEK_MODEL: default `deepseek/deepseek-chat-v3.1`
+  - OPENROUTER_GEMINI_MODEL: default `~google/gemini-flash-latest:nitro`
+  - OPENROUTER_DEEPSEEK_MODEL: default `deepseek/deepseek-v4-pro:nitro`
   - GOOGLE_SERVICE_ACCOUNT_B64: base64 of service account JSON with Sheets scope
   - GOOGLE_SHEET_ID: target spreadsheet ID
   - GOOGLE_SHEET_NAME: target sheet name (default: Events)

@@ -16,23 +16,23 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@openrouter/sdk": "^0.3.11",
-    "googleapis": "^161.0.0",
+    "@openrouter/sdk": "^0.12.35",
+    "googleapis": "^173.0.0",
     "telegraf": "^4.16.3",
-    "zod": "^4.1.12"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.37.0",
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^9.39.4",
     "@types/bun": "latest",
-    "eslint": "^9.37.0",
+    "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.3",
-    "prettier": "^3.6.2",
+    "lint-staged": "^17.0.5",
+    "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "typescript": "^5.6.3",
-    "typescript-eslint": "^8.46.0"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.60.0"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
