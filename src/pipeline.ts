@@ -21,22 +21,27 @@ export type ProcessResult = {
   chineseSheets?: { action: string; row: number };
 };
 
+type SourcePlatform = 'twitter' | 'web' | 'telegram';
+
 function makeWebSourceId(url: string): string {
   const hash = createHash('sha256').update(url).digest('hex').slice(0, 16);
   return `web:${hash}`;
 }
 
 async function processContent(opts: {
-  platform: 'twitter' | 'web';
+  platform: SourcePlatform;
   url: string;
   sourceId: string;
   text: string;
   images: string[];
+  exposedImages?: string[];
   authorName?: string;
   authorHandle?: string;
   sourceDate?: string;
   sourceLabel?: string;
 }): Promise<ProcessResult> {
+  const promptImageUrls = opts.exposedImages ?? opts.images;
+
   debug('pipeline.source', {
     platform: opts.platform,
     sourceId: opts.sourceId,
@@ -44,7 +49,7 @@ async function processContent(opts: {
     textLen: opts.text.length,
   });
 
-  const { system, user } = buildClassificationPrompt(opts.text, opts.images, {
+  const { system, user } = buildClassificationPrompt(opts.text, promptImageUrls, {
     sourceDate: opts.sourceDate,
     sourceUrl: opts.url,
     sourceLabel: opts.sourceLabel,
@@ -67,7 +72,7 @@ async function processContent(opts: {
     model: CONFIG.geminiModel,
     enforcedJsonSchema: {
       name: 'EventRecord',
-      description: 'Extract event data from a webpage or social post',
+      description: 'Extract event data from a webpage, social post, or chat message',
       schema: z.toJSONSchema(EventSchema),
     },
   });
@@ -92,7 +97,13 @@ async function processContent(opts: {
     parsed.source.tweetId = opts.sourceId;
     if (opts.authorName) parsed.source.authorName = opts.authorName;
     if (opts.authorHandle) parsed.source.authorHandle = opts.authorHandle;
-    parsed.images = parsed.images ?? opts.images ?? [];
+    const fallbackImages = (opts.exposedImages ?? opts.images).filter(
+      (image) => !image.startsWith('data:'),
+    );
+    const parsedImages = Array.isArray(parsed.images)
+      ? parsed.images.filter((image) => typeof image === 'string' && !image.startsWith('data:'))
+      : [];
+    parsed.images = parsedImages.length > 0 ? parsedImages : fallbackImages;
 
     extracted = EventSchema.parse(parsed);
   } catch (e) {
@@ -153,6 +164,33 @@ async function processContent(opts: {
 export async function processTweetUrl(url: string) {
   // Backwards-compatible wrapper.
   return processUrl(url);
+}
+
+export async function processTelegramMessage(opts: {
+  text: string;
+  images: string[];
+  sourceId: string;
+  url: string;
+  authorName?: string;
+  authorHandle?: string;
+  sourceDate?: string;
+}): Promise<ProcessResult> {
+  const text =
+    opts.text.trim() ||
+    '(No Telegram message text. Extract event details from the attached images.)';
+
+  return processContent({
+    platform: 'telegram',
+    url: opts.url,
+    sourceId: opts.sourceId,
+    text,
+    images: opts.images,
+    exposedImages: [],
+    authorName: opts.authorName,
+    authorHandle: opts.authorHandle,
+    sourceDate: opts.sourceDate,
+    sourceLabel: 'Telegram',
+  });
 }
 
 export async function processUrl(url: string): Promise<ProcessResult> {
