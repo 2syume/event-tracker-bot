@@ -1,8 +1,19 @@
 // Minimal OpenRouter client wrapper around the official SDK
 import { OpenRouter } from '@openrouter/sdk';
-import type { ChatFormatJsonSchemaConfig } from '@openrouter/sdk/models';
+import type {
+  ChatFormatJsonSchemaConfig,
+  ChatFunctionTool,
+  ResponseHealingPlugin,
+} from '@openrouter/sdk/models';
 
 import { debug } from './debug';
+
+const OPENROUTER_SERVER_TOOLS = [
+  { type: 'openrouter:web_search' },
+  { type: 'openrouter:web_fetch' },
+] satisfies ChatFunctionTool[];
+
+const OPENROUTER_PLUGINS = [{ id: 'response-healing' }] satisfies ResponseHealingPlugin[];
 
 function normalizeContentToString(content: unknown): string {
   if (typeof content === 'string') return content;
@@ -80,6 +91,9 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions, signal?: 
         stream: false,
         temperature: opts.temperature ?? 0,
         responseFormat: enforcedResponseFormat,
+        tools: OPENROUTER_SERVER_TOOLS,
+        plugins: OPENROUTER_PLUGINS,
+        reasoning: { effort: 'low' },
       },
     },
     {

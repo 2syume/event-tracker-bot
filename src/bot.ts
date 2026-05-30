@@ -4,6 +4,8 @@ import { debug } from './debug';
 import { processTelegramMessage, processUrl, type ProcessResult } from './pipeline';
 
 const MAX_TELEGRAM_IMAGES = 4;
+const TEMPORARY_REPLY_DELETE_MS = 60_000;
+const TEMPORARY_REPLY_NOTICE = 'This message will be deleted in 1 min.';
 
 type TelegramImageFile = {
   fileId: string;
@@ -233,6 +235,34 @@ function makeTelegramSourceUrl(chat: unknown, message: unknown): string {
   return `https://t.me/private/${encodeURIComponent(chatId.replace(/^-/, ''))}/${messageId}`;
 }
 
+function formatTemporaryMessage(text: string): string {
+  const trimmed = text.trim();
+  const maxBodyLength = 3500 - TEMPORARY_REPLY_NOTICE.length - 2;
+  const body =
+    trimmed.length <= maxBodyLength ? trimmed : `${trimmed.slice(0, maxBodyLength - 3)}...`;
+  return `${body}\n\n${TEMPORARY_REPLY_NOTICE}`;
+}
+
+async function replyTemporarily(ctx: Context, text: string): Promise<void> {
+  const sent = await ctx.reply(formatTemporaryMessage(text), {
+    link_preview_options: { is_disabled: true },
+  });
+  const chatId = ctx.chat?.id;
+  if (chatId === undefined) return;
+
+  setTimeout(() => {
+    void ctx.telegram.deleteMessage(chatId, sent.message_id).catch((e) => {
+      debug('bot.temporaryReply.delete.error', (e as Error).message);
+    });
+  }, TEMPORARY_REPLY_DELETE_MS);
+}
+
+function getRejectionReason(result: ProcessResult): string {
+  const reason = result.extracted.whyItIsEvent?.trim();
+  if (reason) return reason;
+  return 'The message was not classified as an eligible in-person anime, game, comic, or related fan event.';
+}
+
 function getTelegramSourceDate(message: unknown): string | undefined {
   const date = asRecord(message)?.date;
   if (typeof date !== 'number') return undefined;
@@ -268,7 +298,10 @@ function chooseTelegramSourceMessage(
 }
 
 async function replyWithProcessResult(ctx: Context, result: ProcessResult): Promise<void> {
-  if (!result.extracted.isEvent) return;
+  if (!result.extracted.isEvent) {
+    await replyTemporarily(ctx, `Event rejected: ${getRejectionReason(result)}`);
+    return;
+  }
 
   const title = result.translated?.title ?? result.extracted.title ?? '(no title)';
   const start = result.extracted.startDate ?? '(unknown)';
@@ -358,7 +391,7 @@ export function startBot() {
     } catch (e) {
       const msg = (e as Error).message;
       debug('bot.process.error', msg);
-      await ctx.reply(`Failed: ${msg}`);
+      await replyTemporarily(ctx, `Event adding failed: ${msg}`);
     }
   };
 

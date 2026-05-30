@@ -70,6 +70,7 @@ async function processContent(opts: {
 
   const extractionStr = await chat(messages, {
     model: CONFIG.geminiModel,
+    temperature: 0,
     enforcedJsonSchema: {
       name: 'EventRecord',
       description: 'Extract event data from a webpage, social post, or chat message',
@@ -129,6 +130,7 @@ async function processContent(opts: {
   ];
   const tStr = await chat(tMsg, {
     model: CONFIG.deepseekModel,
+    temperature: 0.1,
     enforcedJsonSchema: {
       name: 'EventRecord',
       description: 'Translate event data',

@@ -17,7 +17,7 @@ export function buildClassificationPrompt(
   const user = `
 Task:
 1) Decide if this is an anime / game / comic (nijigen) related event announcement ("isEvent": true/false). An event is defined as a scheduled public gathering, pop up shop, exhibition, convention, live show, collaboration cafe, or similar activity that fans can attend in person. Do not include online-only events.
-2) If true, fill the JSON schema below. If false, respond with "isEvent": false and empty other optional fields.
+2) Always fill "whyItIsEvent" with a concise reason for the decision. If false, respond with "isEvent": false, a concise "whyItIsEvent", and empty other optional fields.
 3) Keep original language for title/description/location/organizer/price/tags.
 4) Summarize title/description if needed.
 5) Dates in ISO if possible (YYYY-MM-DD or full). If not sure, keep original text. Use the tweet date as a reference point for inferring missing year (e.g., "this Friday").
