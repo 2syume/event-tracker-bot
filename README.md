@@ -60,5 +60,6 @@ bun run src/pipeline.ts https://x.com/curtaindamashii/status/1975033367268872542
 - In group chats, mention the bot in the message or caption to trigger extraction. Private chats are processed directly.
 - When mentioning the bot in a reply, the original replied-to message text/caption/images are included as context.
 - This project uses public endpoints (syndication/vxtwitter) to fetch tweet text/images; for private tweets it may fail.
+- Other webpages are fetched by OpenRouter's `web_fetch` server tool, with `web_search` available as a fallback.
 - The LLM extraction is validated with Zod; if the output drifts, prompts may need tuning.
 - The bot upserts rows by a source ID (Tweet ID for Twitter/X; a stable hash for other URLs; chat/message ID for Telegram messages).

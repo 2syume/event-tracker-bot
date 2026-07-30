@@ -6,7 +6,6 @@ import { buildClassificationPrompt, buildTranslationPrompt } from './prompts';
 import { EventSchema, type EventRecord } from './schema';
 import { createSheetsClient } from './sheets';
 import { extractTweetId, fetchTweet } from './twitter';
-import { fetchWebPage } from './web';
 
 import { createHash } from 'node:crypto';
 
@@ -39,6 +38,7 @@ async function processContent(opts: {
   authorHandle?: string;
   sourceDate?: string;
   sourceLabel?: string;
+  fetchSourceUrl?: boolean;
 }): Promise<ProcessResult> {
   const promptImageUrls = opts.exposedImages ?? opts.images;
 
@@ -53,6 +53,7 @@ async function processContent(opts: {
     sourceDate: opts.sourceDate,
     sourceUrl: opts.url,
     sourceLabel: opts.sourceLabel,
+    fetchSourceUrl: opts.fetchSourceUrl,
   });
   const messages = [
     { role: 'system' as const, content: system },
@@ -213,15 +214,14 @@ export async function processUrl(url: string): Promise<ProcessResult> {
     });
   }
 
-  const page = await fetchWebPage(url);
-  if (!page) throw new Error('Unable to fetch webpage');
   return processContent({
     platform: 'web',
-    url: page.url,
-    sourceId: makeWebSourceId(page.url),
-    text: page.text,
+    url,
+    sourceId: makeWebSourceId(url),
+    text: '',
     images: [],
     sourceLabel: 'Web page',
+    fetchSourceUrl: true,
   });
 }
 
