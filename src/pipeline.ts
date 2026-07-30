@@ -3,7 +3,7 @@ import { CONFIG, assertConfig } from './config';
 import { debug, setDebug } from './debug';
 import { chat } from './openrouter';
 import { buildClassificationPrompt, buildTranslationPrompt } from './prompts';
-import { EventSchema, type EventRecord } from './schema';
+import { EventSchema, normalizeEventRecord, type EventRecord } from './schema';
 import { createSheetsClient } from './sheets';
 import { extractTweetId, fetchTweet } from './twitter';
 
@@ -72,6 +72,7 @@ async function processContent(opts: {
   const extractionStr = await chat(messages, {
     model: CONFIG.geminiModel,
     temperature: 0,
+    enableWebTools: opts.fetchSourceUrl === true,
     enforcedJsonSchema: {
       name: 'EventRecord',
       description: 'Extract event data from a webpage, social post, or chat message',
@@ -107,7 +108,7 @@ async function processContent(opts: {
       : [];
     parsed.images = parsedImages.length > 0 ? parsedImages : fallbackImages;
 
-    extracted = EventSchema.parse(parsed);
+    extracted = normalizeEventRecord(EventSchema.parse(parsed));
   } catch (e) {
     debug('pipeline.extractionParseError', (e as Error).message);
     throw new Error(
@@ -140,7 +141,7 @@ async function processContent(opts: {
   });
   try {
     const tParsed = JSON.parse(tStr) as EventRecord;
-    translated = EventSchema.parse(tParsed);
+    translated = normalizeEventRecord(EventSchema.parse(tParsed));
   } catch {
     debug('pipeline.translationParseError');
   }

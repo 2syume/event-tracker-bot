@@ -61,6 +61,8 @@ export type ChatOptions = {
     /** JSON Schema object (Draft-07-ish). */
     schema: Record<string, unknown>;
   };
+  /** Allow OpenRouter's web search/fetch server tools for this request. */
+  enableWebTools?: boolean;
   temperature?: number;
 };
 
@@ -91,7 +93,8 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions, signal?: 
         stream: false,
         temperature: opts.temperature ?? 0,
         responseFormat: enforcedResponseFormat,
-        tools: OPENROUTER_SERVER_TOOLS,
+        provider: enforcedResponseFormat ? { requireParameters: true } : undefined,
+        tools: opts.enableWebTools ? OPENROUTER_SERVER_TOOLS : undefined,
         plugins: OPENROUTER_PLUGINS,
         reasoning: { effort: 'low' },
       },
@@ -103,10 +106,26 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions, signal?: 
     },
   );
 
-  const contentRaw: unknown = result.choices[0]?.message.content;
-  const content = normalizeContentToString(contentRaw);
+  const choice = result.choices[0];
+  if (!choice) throw new Error('OpenRouter returned no completion choice');
+  if (choice.finishReason !== 'stop') {
+    throw new Error(
+      `OpenRouter completion did not finish normally: ${choice.finishReason ?? 'null'}`,
+    );
+  }
+  if (choice.message.refusal)
+    throw new Error(`OpenRouter refused the request: ${choice.message.refusal}`);
+  if (choice.message.toolCalls?.length) {
+    throw new Error('OpenRouter returned unfinished tool calls instead of final content');
+  }
+
+  const contentRaw: unknown = choice.message.content;
+  const content = normalizeContentToString(contentRaw).trim();
+  if (!content) throw new Error('OpenRouter returned empty completion content');
   debug('openrouter.chat', {
     model: opts.model,
+    resolvedModel: result.model,
+    finishReason: choice.finishReason,
     ms: Date.now() - start,
     contentLen: content.length,
   });
