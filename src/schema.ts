@@ -1,35 +1,35 @@
 import { z } from 'zod';
 
-type PartialStringNode = {
+type SerializedStringNode = {
   completionState?: unknown;
   type: 'String';
   value: string;
 };
 
-type PartialObjectNode = {
+type SerializedObjectNode = {
   completionState?: unknown;
   entries?: unknown;
   type?: unknown;
 };
 
-function isPartialStringNode(value: unknown): value is PartialStringNode {
+function isSerializedStringNode(value: unknown): value is SerializedStringNode {
   if (!value || typeof value !== 'object') return false;
 
-  const node = value as PartialStringNode;
+  const node = value as SerializedStringNode;
   return node.type === 'String' && typeof node.value === 'string';
 }
 
-function readPartialObjectLocation(value: unknown): string | undefined {
+function readSerializedObjectLocation(value: unknown): string | undefined {
   if (!value || typeof value !== 'object') return undefined;
 
-  const node = value as PartialObjectNode;
-  if (node.type !== 'Object' || node.completionState !== 'incomplete') return undefined;
+  const node = value as SerializedObjectNode;
+  if (node.type !== 'Object') return undefined;
   if (!Array.isArray(node.entries)) return undefined;
 
   const values = new Map<string, string>();
   for (const entry of node.entries) {
     if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string') continue;
-    if (!isPartialStringNode(entry[1])) continue;
+    if (!isSerializedStringNode(entry[1])) continue;
 
     const text = entry[1].value.trim();
     if (text) values.set(entry[0], text);
@@ -50,14 +50,11 @@ export function normalizeLocation(value: string | undefined): string | undefined
 
   try {
     const parsed: unknown = JSON.parse(location);
-    const normalized = readPartialObjectLocation(parsed);
+    const normalized = readSerializedObjectLocation(parsed);
     if (normalized) return normalized;
 
-    const maybePartialObject = parsed as PartialObjectNode;
-    if (
-      maybePartialObject?.type === 'Object' &&
-      maybePartialObject.completionState === 'incomplete'
-    ) {
+    const maybeSerializedObject = parsed as SerializedObjectNode;
+    if (maybeSerializedObject?.type === 'Object') {
       return undefined;
     }
   } catch {

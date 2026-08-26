@@ -3,7 +3,7 @@ import z from 'zod';
 
 import { EventSchema, normalizeEventRecord, normalizeLocation } from '../schema';
 
-const leakedLocation = JSON.stringify({
+const incompleteLocation = JSON.stringify({
   completionState: 'incomplete',
   entries: [
     [
@@ -11,15 +11,31 @@ const leakedLocation = JSON.stringify({
       {
         completionState: 'incomplete',
         type: 'String',
-        value: '横浜アリーナ',
+        value: '新宿丸井 MEN 8F',
+      },
+    ],
+    ['address', { type: 'Null' }],
+  ],
+  type: 'Object',
+});
+
+const completeLocation = JSON.stringify({
+  completionState: 'complete',
+  entries: [
+    [
+      'name',
+      {
+        completionState: 'complete',
+        type: 'String',
+        value: '淳久堂书店池袋本店 9楼 画廊空间',
       },
     ],
     [
       'address',
       {
-        completionState: 'incomplete',
+        completionState: 'complete',
         type: 'String',
-        value: '神奈川県横浜市港北区新横浜3-10',
+        value: '东京都丰岛区南池袋2-15-5',
       },
     ],
   ],
@@ -31,11 +47,17 @@ describe('normalizeLocation', () => {
     expect(normalizeLocation('横浜アリーナ')).toBe('横浜アリーナ');
   });
 
-  test('converts leaked partial-object metadata into a readable location', () => {
-    expect(normalizeLocation(leakedLocation)).toBe('横浜アリーナ, 神奈川県横浜市港北区新横浜3-10');
+  test('converts incomplete object metadata with a null address', () => {
+    expect(normalizeLocation(incompleteLocation)).toBe('新宿丸井 MEN 8F');
   });
 
-  test('rejects incomplete-object metadata without usable string values', () => {
+  test('converts complete object metadata into a readable location', () => {
+    expect(normalizeLocation(completeLocation)).toBe(
+      '淳久堂书店池袋本店 9楼 画廊空间, 东京都丰岛区南池袋2-15-5',
+    );
+  });
+
+  test('rejects object metadata without usable string values', () => {
     expect(
       normalizeLocation(
         JSON.stringify({
@@ -53,7 +75,7 @@ describe('EventSchema', () => {
     expect(() => z.toJSONSchema(EventSchema)).not.toThrow();
   });
 
-  test('normalizes leaked location metadata after schema validation', () => {
+  test('normalizes complete location metadata after schema validation', () => {
     const parsed = EventSchema.parse({
       source: {
         platform: 'twitter',
@@ -61,12 +83,12 @@ describe('EventSchema', () => {
         tweetId: '1',
       },
       isEvent: true,
-      location: leakedLocation,
+      location: completeLocation,
       images: [],
     });
 
     expect(normalizeEventRecord(parsed).location).toBe(
-      '横浜アリーナ, 神奈川県横浜市港北区新横浜3-10',
+      '淳久堂书店池袋本店 9楼 画廊空间, 东京都丰岛区南池袋2-15-5',
     );
   });
 });
