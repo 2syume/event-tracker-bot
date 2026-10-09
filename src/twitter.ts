@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Utilities to parse Twitter/X URLs and fetch tweet content (text + images)
-// We avoid Twitter API by using public oEmbed + CDN endpoints where possible.
+// We avoid Twitter API by using public FxTwitter/VxTwitter APIs and webpage/CDN fallbacks.
 import { debug } from './debug';
 
 export type TweetMedia = {
@@ -58,7 +58,37 @@ async function fetchText(url: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-// Strategy 1: syndication CDN (works for many public tweets)
+async function fetchViaFxTwitter(id: string): Promise<Partial<TweetData> | null> {
+  try {
+    const res = await fetchText(`https://api.fxtwitter.com/status/${id}`);
+    if (!res.ok) return null;
+    const data: any = await res.json();
+    if (data.code !== 200 || data.tweet?.id !== id) return null;
+    const tweet = data.tweet;
+    const text: string = typeof tweet.text === 'string' ? tweet.text : '';
+    const images: string[] = (Array.isArray(tweet.media?.photos) ? tweet.media.photos : [])
+      .map((photo: any) => photo?.url)
+      .filter((url: unknown): url is string => typeof url === 'string' && url.length > 0);
+    const createdRaw: unknown = tweet.created_at;
+    const createdDate = typeof createdRaw === 'string' ? new Date(createdRaw) : undefined;
+    const createdAt =
+      createdDate && !Number.isNaN(createdDate.getTime()) ? createdDate.toISOString() : undefined;
+    const result = {
+      text,
+      images,
+      authorName: tweet.author?.name as string | undefined,
+      authorScreenName: tweet.author?.screen_name as string | undefined,
+      lang: tweet.lang as string | undefined,
+      createdAt,
+    };
+    debug('fetchViaFxTwitter ok', { id, textLen: text.length, images: images.length });
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+// Syndication CDN (works for many public tweets)
 async function fetchViaSyndication(id: string): Promise<Partial<TweetData> | null> {
   try {
     const res = await fetchText(`https://cdn.syndication.twimg.com/tweet-result?id=${id}&lang=en`);
@@ -86,7 +116,7 @@ async function fetchViaSyndication(id: string): Promise<Partial<TweetData> | nul
   }
 }
 
-// Strategy 2: vxtwitter provides enriched metadata for public tweets
+// VxTwitter provides enriched metadata for public tweets
 async function fetchViaVxTwitter(id: string): Promise<Partial<TweetData> | null> {
   try {
     const res = await fetchText(`https://api.vxtwitter.com/Twitter/status/${id}`);
@@ -123,7 +153,7 @@ async function fetchViaVxTwitter(id: string): Promise<Partial<TweetData> | null>
   }
 }
 
-// Strategy 3: Jina AI Reader API for webpage content extraction as fallback (no key required)
+// Jina AI Reader API for webpage content extraction as fallback (no key required)
 async function fetchViaJina(url: string): Promise<Partial<TweetData> | null> {
   try {
     const res = await fetchText('https://r.jina.ai/http://' + url.replace(/^https?:\/\//, ''));
@@ -149,6 +179,11 @@ export async function fetchTweet(url: string): Promise<TweetData | null> {
 
   const base: TweetData = { id, url: normalizedUrl, text: '', images: [] };
   debug('fetchTweet start', { id, url: normalizedUrl });
+  const viaFx = await fetchViaFxTwitter(id);
+  if (viaFx?.text || viaFx?.images?.length) {
+    debug('fetchTweet using fxtwitter', { id });
+    return { ...base, ...viaFx } satisfies TweetData;
+  }
   const viaVx = await fetchViaVxTwitter(id);
   if (viaVx?.text || viaVx?.images?.length) {
     debug('fetchTweet using vxtwitter', { id });
